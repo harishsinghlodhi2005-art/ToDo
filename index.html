@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f5f6fa">
+  <meta name="description" content="Turn everyday tasks into small wins with TaskQuest, your personal productivity game.">
+  <title>TaskQuest — make every day count</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#dashboard" aria-label="TaskQuest home">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5 9.2 17 19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 2.8 14.1 4l2.5-.1 1.2 2.2 2.2 1.2-.1 2.5L21.1 12l-1.2 2.1.1 2.5-2.2 1.2-1.2 2.2-2.5-.1L12 21.1l-2.1-1.2-2.5.1-1.2-2.2L4 16.6l.1-2.5L2.9 12l1.2-2.1L4 7.4l2.2-1.2 1.2-2.2 2.5.1L12 2.8Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></span>
+        <span class="brand-name">Task<span>Quest</span></span>
+      </a>
+
+      <div class="nav-label">WORKSPACE</div>
+      <nav class="side-nav" aria-label="Main navigation">
+        <a class="nav-link active" href="#dashboard"><span class="nav-icon" aria-hidden="true">⌂</span>Dashboard</a>
+        <a class="nav-link" href="#tasks"><span class="nav-icon" aria-hidden="true">☷</span>My tasks<span class="nav-count" id="nav-task-count">0</span></a>
+        <a class="nav-link" href="#challenges"><span class="nav-icon" aria-hidden="true">◇</span>Daily quests</a>
+        <a class="nav-link" href="#statistics"><span class="nav-icon" aria-hidden="true">▥</span>Statistics</a>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="mini-quest">
+          <span class="mini-quest-icon" aria-hidden="true">✦</span>
+          <p class="mini-quest-title">Small steps.<br>Big momentum.</p>
+          <p class="mini-quest-copy">Every task completed is a little win worth celebrating.</p>
+        </div>
+        <button class="profile-button" id="profile-button" type="button" aria-label="Edit your player name">
+          <span class="avatar" id="avatar-initials">P</span>
+          <span class="profile-copy"><strong id="sidebar-player-name">Player</strong><small id="sidebar-player-level">Level 1 adventurer</small></span>
+          <span class="profile-edit" aria-hidden="true">↗</span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-content" id="dashboard">
+      <header class="topbar">
+        <div class="breadcrumb"><span>Workspace</span><span class="breadcrumb-separator">/</span><strong>Overview</strong></div>
+        <div class="topbar-actions">
+          <div class="date-chip"><span aria-hidden="true">◷</span><span id="today-label"></span></div>
+          <button class="icon-button theme-toggle" id="theme-toggle" type="button" aria-label="Switch to dark theme" title="Toggle color theme"><span id="theme-icon" aria-hidden="true">☾</span></button>
+        </div>
+      </header>
+
+      <section class="welcome-row" aria-labelledby="welcome-title">
+        <div>
+          <p class="eyebrow" id="welcome-date">YOUR DAILY ADVENTURE</p>
+          <h1 id="welcome-title">A fresh start, <span id="player-greeting">Player</span><span class="wave" aria-hidden="true">✦</span></h1>
+          <p class="welcome-copy">A little progress each day adds up to something big.</p>
+        </div>
+        <a class="button button-primary header-cta" href="#add-task"><span aria-hidden="true">＋</span> New task</a>
+      </section>
+
+      <section class="level-card" aria-label="Player level and experience">
+        <div class="level-avatar"><span aria-hidden="true">✦</span><span class="level-number" id="level-number">1</span></div>
+        <div class="level-info">
+          <div class="level-heading"><span class="level-label">YOUR JOURNEY</span><span class="level-title" id="level-title">Level 1 Adventurer</span></div>
+          <div class="xp-track" role="progressbar" id="xp-progress" aria-label="Experience toward next level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="xp-progress-fill"></span></div>
+          <div class="xp-caption"><span id="xp-caption">0 / 100 XP</span><span id="xp-next">100 XP to next level</span></div>
+        </div>
+        <div class="level-divider"></div>
+        <div class="wallet"><span class="coin-icon" aria-hidden="true">◉</span><div><strong id="coin-count">0</strong><span>coins earned</span></div></div>
+      </section>
+
+      <section class="stats-grid" aria-label="Today's progress">
+        <article class="stat-card"><div class="stat-top"><span class="stat-label">Completed today</span><span class="stat-icon stat-icon-green" aria-hidden="true">✓</span></div><div class="stat-value"><strong id="stat-completed-today">0</strong><span id="today-task-total">of 0 tasks</span></div><div class="stat-note"><span class="note-dot dot-green"></span>Keep your momentum going</div></article>
+        <article class="stat-card"><div class="stat-top"><span class="stat-label">Current streak</span><span class="stat-icon stat-icon-orange" aria-hidden="true">♨</span></div><div class="stat-value"><strong id="stat-streak">0</strong><span>days</span></div><div class="stat-note"><span class="note-dot dot-orange"></span><span id="streak-note">Your next win starts today</span></div></article>
+        <article class="stat-card"><div class="stat-top"><span class="stat-label">All-time wins</span><span class="stat-icon stat-icon-purple" aria-hidden="true">✦</span></div><div class="stat-value"><strong id="stat-total-completed">0</strong><span>tasks</span></div><div class="stat-note"><span class="note-dot dot-purple"></span><span id="total-xp-note">0 XP earned</span></div></article>
+        <article class="stat-card"><div class="stat-top"><span class="stat-label">Completion rate</span><span class="stat-icon stat-icon-blue" aria-hidden="true">◴</span></div><div class="stat-value"><strong id="stat-completion-rate">0%</strong><span>overall</span></div><div class="mini-progress"><span id="completion-progress-fill"></span></div></article>
+      </section>
+
+      <div class="content-grid">
+        <div class="primary-column">
+          <section class="panel add-panel" id="add-task" aria-labelledby="add-task-title">
+            <div class="panel-heading">
+              <div><p class="eyebrow">BUILD YOUR MOMENTUM</p><h2 id="add-task-title">Add a new task</h2></div>
+              <span class="panel-heading-mark" aria-hidden="true">✎</span>
+            </div>
+            <form id="task-form">
+              <input type="hidden" id="editing-task-id">
+              <div class="form-row">
+                <label class="field field-wide"><span>Task name <span class="required-mark">*</span></span><input id="task-name" name="name" type="text" maxlength="100" placeholder="What would you like to get done?" autocomplete="off" required></label>
+                <label class="field"><span>Difficulty</span><select id="task-difficulty" name="difficulty"><option value="Easy">Easy · 10 XP</option><option value="Medium" selected>Medium · 20 XP</option><option value="Hard">Hard · 40 XP</option></select></label>
+              </div>
+              <label class="field"><span>Notes <span class="optional-label">OPTIONAL</span></span><textarea id="task-description" name="description" rows="2" maxlength="240" placeholder="Add a few details or a reminder..."></textarea></label>
+              <div class="form-row form-row-three">
+                <label class="field"><span>Priority</span><select id="task-priority" name="priority"><option value="Low">Low</option><option value="Medium" selected>Medium</option><option value="High">High</option></select></label>
+                <label class="field"><span>Category</span><select id="task-category" name="category"><option>Study</option><option>Work</option><option>Fitness</option><option>Personal</option><option>Other</option></select></label>
+                <label class="field"><span>Due date &amp; time <span class="optional-label">OPTIONAL</span></span><input id="task-due" name="due" type="datetime-local"></label>
+              </div>
+              <div class="form-footer"><span class="form-hint"><span aria-hidden="true">✦</span> Every task is a chance to earn XP</span><div class="form-actions"><button class="button button-quiet" id="cancel-edit" type="button" hidden>Cancel</button><button class="button button-primary" id="submit-task" type="submit"><span id="submit-task-icon" aria-hidden="true">＋</span><span id="submit-task-label">Add task</span></button></div></div>
+              <p class="form-error" id="form-error" role="alert" hidden></p>
+            </form>
+          </section>
+
+          <section class="panel tasks-panel" id="tasks" aria-labelledby="tasks-title">
+            <div class="panel-heading tasks-heading">
+              <div><p class="eyebrow">ONE THING AT A TIME</p><h2 id="tasks-title">Your tasks <span class="heading-count" id="task-count">0</span></h2></div>
+              <label class="filter-select"><span class="sr-only">Filter tasks by category</span><select id="category-filter" aria-label="Filter tasks by category"><option value="All">All categories</option><option>Study</option><option>Work</option><option>Fitness</option><option>Personal</option><option>Other</option></select></label>
+            </div>
+            <div class="task-tabs" role="tablist" aria-label="Task status">
+              <button class="task-tab active" type="button" role="tab" aria-selected="true" data-task-view="pending">In progress <span id="pending-count">0</span></button>
+              <button class="task-tab" type="button" role="tab" aria-selected="false" data-task-view="completed">Completed <span id="completed-count">0</span></button>
+            </div>
+            <div class="task-list" id="task-list" aria-live="polite"></div>
+          </section>
+
+          <section class="panel statistics-panel" id="statistics" aria-labelledby="statistics-title">
+            <div class="panel-heading"><div><p class="eyebrow">YOUR CONSISTENCY, AT A GLANCE</p><h2 id="statistics-title">Progress &amp; stats</h2></div><span class="stat-period">Last 7 days</span></div>
+            <div class="chart-area" id="weekly-chart" role="img" aria-label="Weekly task completion chart"></div>
+            <div class="category-breakdown" id="category-breakdown" aria-label="Completed tasks by category"></div>
+            <div class="stats-footer">
+              <div><span>Tasks pending</span><strong id="stats-pending">0</strong></div>
+              <div><span>XP earned</span><strong id="stats-xp">0</strong></div>
+              <div><span>Longest streak</span><strong id="stats-longest-streak">0 days</strong></div>
+            </div>
+          </section>
+        </div>
+
+        <aside class="secondary-column" aria-label="Quests and achievements">
+          <section class="panel challenge-panel" id="challenges" aria-labelledby="challenges-title">
+            <div class="panel-heading compact-heading"><div><p class="eyebrow">A LITTLE EXTRA XP</p><h2 id="challenges-title">Daily quests</h2></div><span class="quest-day" id="quest-day-label"></span></div>
+            <p class="section-intro">Pick up a bonus by taking on today's challenge.</p>
+            <div class="challenge-list" id="challenge-list"></div>
+            <div class="bonus-note"><span aria-hidden="true">✦</span><p><strong>Perfect day bonus</strong><br>Finish all of today's tasks for <b>+25 XP</b> and <b>+10 coins</b>.</p></div>
+          </section>
+
+          <section class="panel achievements-panel" aria-labelledby="achievements-title">
+            <div class="panel-heading compact-heading"><div><p class="eyebrow">MILESTONES &amp; MOMENTS</p><h2 id="achievements-title">Achievements</h2></div><span class="achievement-total" id="achievement-total">0 / 7</span></div>
+            <div class="achievement-list" id="achievement-list"></div>
+          </section>
+          <div class="quote-card"><span class="quote-mark" aria-hidden="true">“</span><p>Done is better than perfect. Celebrate every little win.</p><span class="quote-caption">— YOUR QUEST, YOUR PACE</span></div>
+        </aside>
+      </div>
+      <footer class="page-footer"><span>Made for progress, not perfection.</span><span>TaskQuest <span aria-hidden="true">✦</span></span></footer>
+    </main>
+  </div>
+
+  <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+  <div class="celebration-layer" id="celebration-layer" aria-hidden="true"></div>
+  <dialog class="level-dialog" id="level-dialog" aria-labelledby="level-dialog-title"><span class="level-dialog-spark" aria-hidden="true">✦</span><p class="eyebrow">LOOK AT YOU GO</p><h2 id="level-dialog-title">LEVEL UP!</h2><p id="level-dialog-copy">You've reached a new level.</p><button class="button button-primary" id="level-dialog-close" type="button">Onward <span aria-hidden="true">→</span></button></dialog>
+</body>
+</html>
