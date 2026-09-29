@@ -2,6 +2,8 @@
 
 const STORAGE_KEY = 'taskquest.save.v1';
 const THEME_KEY = 'taskquest.theme.v1';
+const TASK_MIGRATION_KEY = 'taskquest.mongo-migration.v1';
+const TASK_API_URL = '/api/tasks';
 const DAILY_BONUS_XP = 25;
 const DAILY_BONUS_COINS = 10;
 const XP_BY_DIFFICULTY = { Easy: 10, Medium: 20, Hard: 40 };
@@ -141,6 +143,112 @@ function persist() {
     console.error('TaskQuest could not save progress.', error);
     showToast('Your progress could not be saved. Check your browser storage settings.', 'error');
   }
+}
+
+async function apiRequest(url, options = {}) {
+  const response = await fetch(url, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...options.headers }
+  });
+  let result = {};
+  try {
+    result = await response.json();
+  } catch (error) {
+    result = {};
+  }
+  if (!response.ok) throw new Error(result.error || `Request failed (${response.status}).`);
+  return result;
+}
+
+function apiDate(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function localDateTime(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const pad = number => String(number).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function apiTaskPayload(task) {
+  return {
+    title: task.name,
+    description: task.description || '',
+    completed: task.completed === true,
+    completedAt: apiDate(task.completedAt),
+    difficulty: task.difficulty,
+    priority: task.priority,
+    category: task.category,
+    dueAt: apiDate(task.dueAt),
+    rewardClaimed: task.rewardClaimed === true
+  };
+}
+
+function taskFromApi(task) {
+  return {
+    id: task._id,
+    name: task.title,
+    description: task.description || '',
+    difficulty: task.difficulty || 'Medium',
+    category: task.category || 'Other',
+    priority: task.priority || 'Medium',
+    dueAt: localDateTime(task.dueAt),
+    completed: task.completed === true,
+    completedAt: task.completedAt ? new Date(task.completedAt).toISOString() : '',
+    createdAt: task.createdAt ? new Date(task.createdAt).toISOString() : new Date().toISOString(),
+    rewardClaimed: task.rewardClaimed === true
+  };
+}
+
+function getTaskMigrationStatus() {
+  try {
+    return localStorage.getItem(TASK_MIGRATION_KEY);
+  } catch (error) {
+    console.error('TaskQuest could not read its migration status.', error);
+    return 'done';
+  }
+}
+
+function setTaskMigrationStatus(status) {
+  try {
+    localStorage.setItem(TASK_MIGRATION_KEY, status);
+  } catch (error) {
+    console.error('TaskQuest could not save its migration status.', error);
+  }
+}
+
+async function loadTasksFromApi() {
+  const response = await apiRequest(TASK_API_URL);
+  let apiTasks = response.tasks.map(taskFromApi);
+  let migrationStatus = getTaskMigrationStatus();
+
+  if (!migrationStatus) {
+    migrationStatus = apiTasks.length === 0 && state.tasks.length ? 'pending' : 'done';
+    setTaskMigrationStatus(migrationStatus);
+  }
+
+  if (migrationStatus === 'pending') {
+    for (const savedTask of [...state.tasks]) {
+      if (apiTasks.some(task => task.id === savedTask.id)) continue;
+      const result = await apiRequest(TASK_API_URL, {
+        method: 'POST',
+        body: JSON.stringify(apiTaskPayload(savedTask))
+      });
+      const migratedTask = taskFromApi(result.task);
+      const savedIndex = state.tasks.findIndex(task => task.id === savedTask.id);
+      if (savedIndex !== -1) state.tasks[savedIndex] = migratedTask;
+      apiTasks.push(migratedTask);
+      persist();
+    }
+    setTaskMigrationStatus('done');
+  }
+
+  state.tasks = apiTasks;
+  persist();
 }
 
 function escapeHtml(value) {
@@ -434,7 +542,7 @@ function startEditingTask(task) {
   elements.taskName.focus({ preventScroll: true });
 }
 
-function handleTaskSubmit(event) {
+async function handleTaskSubmit(event) {
   event.preventDefault();
   const name = elements.taskName.value.trim();
   if (!name) {
@@ -452,48 +560,85 @@ function handleTaskSubmit(event) {
     difficulty: elements.taskDifficulty.value,
     dueAt: elements.taskDue.value
   };
-  if (taskId) {
-    const task = state.tasks.find(item => item.id === taskId);
-    if (!task) {
-      showToast('This task is no longer available. Refresh and try again.', 'error');
-      resetTaskForm();
-      return;
-    }
-    Object.assign(task, updates);
-    showToast('Task updated. Your quest, your way.');
-  } else {
-    state.tasks.push({
-      id: crypto.randomUUID(),
-      ...updates,
-      createdAt: new Date().toISOString(),
-      completed: false,
-      completedAt: '',
-      rewardClaimed: false
-    });
-    showToast('Task added. You’ve got this!');
+  const task = taskId ? state.tasks.find(item => item.id === taskId) : null;
+  if (taskId && !task) {
+    showToast('This task is no longer available. Refresh and try again.', 'error');
+    resetTaskForm();
+    return;
   }
-  resetTaskForm();
-  checkAchievements();
-  persist();
-  renderDashboard();
+
+  const submitButton = document.querySelector('#submit-task');
+  submitButton.disabled = true;
+  try {
+  if (taskId) {
+      const result = await apiRequest(`${TASK_API_URL}/${encodeURIComponent(taskId)}`, {
+        method: 'PUT',
+        body: JSON.stringify(apiTaskPayload({ ...task, ...updates }))
+      });
+      Object.assign(task, taskFromApi(result.task));
+    showToast('Task updated. Your quest, your way.');
+    } else {
+      const result = await apiRequest(TASK_API_URL, {
+        method: 'POST',
+        body: JSON.stringify(apiTaskPayload({
+          ...updates,
+          completed: false,
+          completedAt: '',
+          rewardClaimed: false
+        }))
+      });
+      state.tasks.push(taskFromApi(result.task));
+      showToast('Task added. You’ve got this!');
+    }
+    resetTaskForm();
+    checkAchievements();
+    persist();
+    renderDashboard();
+  } catch (error) {
+    elements.formError.textContent = `Task could not be saved: ${error.message}`;
+    elements.formError.hidden = false;
+  } finally {
+    submitButton.disabled = false;
+  }
 }
 
-function toggleTask(task, button) {
+async function toggleTask(task, button) {
+  button.disabled = true;
   if (task.completed) {
-    task.completed = false;
-    task.completedAt = '';
+    try {
+      const result = await apiRequest(`${TASK_API_URL}/${encodeURIComponent(task.id)}`, {
+        method: 'PUT',
+        body: JSON.stringify({ completed: false, completedAt: null })
+      });
+      Object.assign(task, taskFromApi(result.task));
+    } catch (error) {
+      button.disabled = false;
+      showToast(`Task could not be updated: ${error.message}`, 'error');
+      return;
+    }
     persist();
     renderDashboard();
     showToast('Task moved back to your in-progress list.');
     return;
   }
 
-  task.completed = true;
   const completedAt = new Date().toISOString();
-  task.completedAt = completedAt;
+  const shouldAwardReward = !task.rewardClaimed;
+  try {
+    const result = await apiRequest(`${TASK_API_URL}/${encodeURIComponent(task.id)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ completed: true, completedAt, rewardClaimed: true })
+    });
+    Object.assign(task, taskFromApi(result.task));
+  } catch (error) {
+    button.disabled = false;
+    showToast(`Task could not be completed: ${error.message}`, 'error');
+    return;
+  }
+
   const previousLevel = state.level;
   let levelUp = false;
-  if (!task.rewardClaimed) {
+  if (shouldAwardReward) {
     const xp = XP_BY_DIFFICULTY[task.difficulty];
     const coins = COINS_BY_DIFFICULTY[task.difficulty];
     task.rewardClaimed = true;
@@ -530,8 +675,14 @@ function toggleTask(task, button) {
   if (levelUp) window.setTimeout(showLevelUp, 350);
 }
 
-function deleteTask(task) {
+async function deleteTask(task) {
   if (!window.confirm(`Permanently delete "${task.name}"? This cannot be undone.`)) return;
+  try {
+    await apiRequest(`${TASK_API_URL}/${encodeURIComponent(task.id)}`, { method: 'DELETE' });
+  } catch (error) {
+    showToast(`Task could not be deleted: ${error.message}`, 'error');
+    return;
+  }
   state.tasks = state.tasks.filter(item => item.id !== task.id);
   if (elements.editingTaskId.value === task.id) resetTaskForm();
   persist();
@@ -618,8 +769,17 @@ try {
   console.error('TaskQuest could not load the theme preference.', error);
 }
 
-if (savedProgressLoadFailed) showToast('Saved progress could not be loaded. Your current session will start fresh.', 'error');
-claimCompletedChallenges();
-checkAchievements();
-persist();
-renderDashboard();
+async function startApplication() {
+  if (savedProgressLoadFailed) showToast('Saved progress could not be loaded. Your current session will start fresh.', 'error');
+  try {
+    await loadTasksFromApi();
+  } catch (error) {
+    showToast(`Tasks could not be loaded from the server: ${error.message}`, 'error');
+  }
+  claimCompletedChallenges();
+  checkAchievements();
+  persist();
+  renderDashboard();
+}
+
+startApplication();
